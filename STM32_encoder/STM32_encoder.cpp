@@ -232,3 +232,19 @@ int64_t  STM32_encoder::get_angle()
 }
 
 
+int64_t STM32_encoder::get_count() {
+    int64_t total_count = 0;
+    if (_is_count) {
+        core_util_critical_section_enter();
+        int32_t _count = _htim.Instance->CNT;
+        if ((_htim.Instance->SR & (TIM_FLAG_UPDATE)) == TIM_FLAG_UPDATE) {
+            _htim.Instance->SR = ~(TIM_IT_UPDATE);
+            if (_htim.Instance->CNT < (_htim.Init.Period + 1) / 2) _hbits += 1;
+            else _hbits -= 1;
+            _count = _htim.Instance->CNT;
+        }
+        total_count = (_hbits << 16) | _count;
+        core_util_critical_section_exit();
+    }
+    return total_count;
+}

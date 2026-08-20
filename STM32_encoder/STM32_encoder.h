@@ -2,6 +2,7 @@
 #define __STM32_ENCODER__
 
 #include "mbed.h"
+#include <cstdint>
 
 typedef struct{
     PinName pin_a;
@@ -28,6 +29,7 @@ class STM32_encoder{
     void stop();
     void reset();
     int64_t get_angle();
+    int64_t get_count();
 
     private:
     PinName _a, _b;
