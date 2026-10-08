@@ -28,7 +28,7 @@ class STM32_encoder{
     void start();
     void stop();
     void reset();
-    int64_t get_angle();
+    double get_angle(int64_t current_count);
     int64_t get_count();
 
     private:

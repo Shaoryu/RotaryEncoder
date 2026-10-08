@@ -170,28 +170,29 @@ void STM32_encoder::GPIO_InitPeriph(PinName slit_a, PinName slit_b)
 void STM32_encoder::start()
 {
     _is_count = true;
-
+    uint32_t period_max = 0xffff;
     for(const TIM_Pin_Map& mapping : tim_mappings){
         if(mapping.Pin_name.pin_a == _a && mapping.Pin_name.pin_b == _b){
             _htim.Instance = mapping.tim_instance;
+            period_max = mapping.tim_max;
         }
     }
-    _htim.Init.Period = tim_mappings->tim_max;
+    _htim.Init.Period = period_max;
     _htim.Init.Prescaler = 0;
     _htim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     _htim.Init.CounterMode = TIM_COUNTERMODE_UP;
 
     // CH1の設定
     _encoder.EncoderMode = TIM_ENCODERMODE_TI12;
-    _encoder.IC1Filter = 0x0f;
+    _encoder.IC1Filter = 0x00;
     _encoder.IC1Polarity = TIM_INPUTCHANNELPOLARITY_RISING;
-    _encoder.IC1Prescaler = TIM_ICPSC_DIV4;
+    _encoder.IC1Prescaler = TIM_ICPSC_DIV1;
     _encoder.IC1Selection = TIM_ICSELECTION_DIRECTTI;
  
     // CH2の設定
-    _encoder.IC2Filter = 0x0f;
+    _encoder.IC2Filter = 0x00;
     _encoder.IC2Polarity = TIM_INPUTCHANNELPOLARITY_FALLING;
-    _encoder.IC2Prescaler = TIM_ICPSC_DIV4;
+    _encoder.IC2Prescaler = TIM_ICPSC_DIV1;
     _encoder.IC2Selection = TIM_ICSELECTION_DIRECTTI;
 
     HAL_TIM_Encoder_Init(&_htim, &_encoder);
@@ -209,26 +210,13 @@ void STM32_encoder::reset()
     core_util_critical_section_exit();
 }
 
-int64_t  STM32_encoder::get_angle()
+double STM32_encoder::get_angle(int64_t current_count)
 {
-    int64_t _angle;
     if(_is_count){
-        int32_t _count;
-        core_util_critical_section_enter();
-        _count = _htim.Instance->CNT;
-        if((_htim.Instance->SR & (TIM_FLAG_UPDATE)) == TIM_FLAG_UPDATE){
-            _htim.Instance->SR = ~(TIM_IT_UPDATE);
-            if(_htim.Instance->CNT < (_htim.Init.Period + 1) / 2)
-                _hbits += 1;
-            else
-                _hbits -= 1;
-            _count = _htim.Instance->CNT;
-        }
-        _angle = int64_t(((_hbits << 16) | _count) / float(_resolution * _times / 360.0)); 
-        core_util_critical_section_exit();
-        
+        // 360.0 (double型) を使って計算し、精度落ちを防ぐ
+        return (current_count * 360.0) / (_resolution * _times);
     }
-    return _angle;
+    return 0.0;
 }
 
 
